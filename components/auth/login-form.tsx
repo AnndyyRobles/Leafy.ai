@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
+import { useAuth } from "./auth-provider"
 
 export function LoginForm() {
   const [email, setEmail] = useState("")
@@ -18,6 +19,7 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const { toast } = useToast()
+  const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,19 +34,14 @@ export function LoginForm() {
     }
 
     try {
-      // Aquí iría la lógica real de autenticación
-      // Simulamos un delay para mostrar el estado de carga
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
+      await login(email, password)
+      
       toast({
         title: "Inicio de sesión exitoso",
         description: "Bienvenido de vuelta a Leafy.ai",
       })
-
-      // Redirigir al usuario a la página principal
-      router.push("/")
-    } catch (err) {
-      setError("Credenciales incorrectas. Por favor intenta de nuevo.")
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Error al iniciar sesión. Por favor intenta de nuevo.")
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -115,4 +112,3 @@ export function LoginForm() {
     </form>
   )
 }
-

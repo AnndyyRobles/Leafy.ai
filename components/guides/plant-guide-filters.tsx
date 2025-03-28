@@ -1,15 +1,14 @@
 "use client"
 
+import { useState, useEffect } from "react"
+import axios from "axios"
 import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
+import { Search, Loader2 } from "lucide-react"
 
-// Plant categories from the database
-const PLANT_CATEGORIES = [
-  { id: 1, name: "Bulbs" },
-  { id: 2, name: "Herbs" },
-  { id: 3, name: "Vegetables" },
-  { id: 4, name: "Fruits" },
-]
+interface PlantCategory {
+  id: number
+  name: string
+}
 
 interface PlantGuideFiltersProps {
   searchQuery: string
@@ -24,6 +23,26 @@ export function PlantGuideFilters({
   selectedCategories,
   onCategoryChange,
 }: PlantGuideFiltersProps) {
+  const [categories, setCategories] = useState<PlantCategory[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/guides/categories`)
+        setCategories(response.data)
+        setLoading(false)
+      } catch (err) {
+        console.error("Error fetching plant categories:", err)
+        setError("No se pudieron cargar las categorías")
+        setLoading(false)
+      }
+    }
+
+    fetchCategories()
+  }, [])
+
   const toggleCategory = (category: string) => {
     if (selectedCategories.includes(category)) {
       onCategoryChange(selectedCategories.filter((c) => c !== category))
@@ -32,9 +51,17 @@ export function PlantGuideFilters({
     }
   }
 
-  const clearFilters = () => {
-    onSearchChange("")
-    onCategoryChange([])
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2">
+        <Loader2 className="h-4 w-4 text-leafy-green-dark animate-spin" />
+        <span>Cargando filtros...</span>
+      </div>
+    )
+  }
+
+  if (error) {
+    return <div className="text-red-500">{error}</div>
   }
 
   return (
@@ -51,7 +78,7 @@ export function PlantGuideFilters({
           All
         </button>
 
-        {PLANT_CATEGORIES.map((category) => (
+        {categories.map((category) => (
           <button
             key={category.id}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
@@ -79,4 +106,3 @@ export function PlantGuideFilters({
     </div>
   )
 }
-

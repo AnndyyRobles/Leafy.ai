@@ -2,29 +2,71 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Upload, X } from "lucide-react"
+import { ArrowLeft, Upload, X, Loader2 } from "lucide-react"
 import { TechniqueBadge } from "@/components/posts/technique-badge"
 import { useToast } from "@/components/ui/use-toast"
+import axios from "axios"
+import { useAuth } from "@/components/auth/auth-provider"
 
-// Definir las técnicas de cultivo disponibles
-const CULTIVATION_TECHNIQUES = ["Vertical", "Wall-mounted", "Hydroponics", "Recycled Materials", "Aquaponics"]
+interface Technique {
+  id: number
+  name: string
+}
 
 export default function NewPostPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { isAuthenticated } = useAuth()
   const [caption, setCaption] = useState("")
-  const [selectedTechnique, setSelectedTechnique] = useState<string | null>(null)
-  const [image, setImage] = useState<string | null>(null)
+  const [selectedTechnique, setSelectedTechnique] = useState<Technique | null>(null)
+  const [image, setImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [techniques, setTechniques] = useState<Technique[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Redireccionar si no está autenticado
+  useEffect(() => {
+    if (!isAuthenticated && !loading) {
+      router.push("/login")
+      toast({
+        title: "Acceso denegado",
+        description: "Debes iniciar sesión para crear un post",
+        variant: "destructive",
+      })
+    }
+  }, [isAuthenticated, loading, router, toast])
+
+  // Cargar técnicas de cultivo
+  useEffect(() => {
+    const fetchTechniques = async () => {
+      try {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/techniques`)
+        setTechniques(response.data)
+        setLoading(false)
+      } catch (error) {
+        console.error("Error cargando técnicas:", error)
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las técnicas de cultivo",
+          variant: "destructive",
+        })
+        setLoading(false)
+      }
+    }
+
+    fetchTechniques()
+  }, [toast])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      setImage(file)
       const reader = new FileReader()
       reader.onload = (e) => {
-        setImage(e.target?.result as string)
+        setImagePreview(e.target?.result as string)
       }
       reader.readAsDataURL(file)
     }
@@ -32,6 +74,7 @@ export default function NewPostPage() {
 
   const removeImage = () => {
     setImage(null)
+    setImagePreview(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,8 +82,8 @@ export default function NewPostPage() {
 
     if (!caption.trim() || !image) {
       toast({
-        title: "Missing information",
-        description: "Please add both a caption and an image to share your post.",
+        title: "Información incompleta",
+        description: "Por favor añade tanto un texto como una imagen para compartir tu post.",
         variant: "destructive",
       })
       return
@@ -48,16 +91,40 @@ export default function NewPostPage() {
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      const formData = new FormData()
+      formData.append("description", caption)
+      formData.append("post_picture", image)
+      
+      if (selectedTechnique) {
+        formData.append("techniques", JSON.stringify([selectedTechnique.id]))
+      }
 
-    toast({
-      title: "Post shared!",
-      description: "Your post has been shared successfully.",
-    })
+      const token = localStorage.getItem("token")
+      
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/posts`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+      })
 
-    setIsSubmitting(false)
-    router.push("/")
+      toast({
+        title: "Post compartido!",
+        description: "Tu post ha sido compartido exitosamente.",
+      })
+
+      setIsSubmitting(false)
+      router.push("/")
+    } catch (error) {
+      console.error("Error al crear post:", error)
+      toast({
+        title: "Error",
+        description: "Hubo un problema al compartir tu post. Por favor intenta de nuevo.",
+        variant: "destructive",
+      })
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -83,7 +150,7 @@ export default function NewPostPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <h2 className="text-lg font-medium mb-4 text-leafy-green-dark">Upload Image</h2>
 
-            {!image ? (
+            {!imagePreview ? (
               <div className="border-2 border-dashed border-leafy-green-light rounded-lg p-8 text-center">
                 <input type="file" accept="image/*" id="image-upload" className="hidden" onChange={handleImageUpload} />
                 <label htmlFor="image-upload" className="flex flex-col items-center justify-center cursor-pointer">
@@ -95,7 +162,7 @@ export default function NewPostPage() {
             ) : (
               <div className="relative">
                 <img
-                  src={image || "/placeholder.svg"}
+                  src={imagePreview}
                   alt="Preview"
                   className="w-full rounded-lg object-cover max-h-96"
                 />
@@ -125,16 +192,16 @@ export default function NewPostPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <h2 className="text-lg font-medium mb-4 text-leafy-green-dark">Cultivation Technique</h2>
             <div className="flex flex-wrap gap-2">
-              {CULTIVATION_TECHNIQUES.map((technique) => (
+              {techniques.map((technique) => (
                 <button
-                  key={technique}
+                  key={technique.id}
                   type="button"
                   onClick={() => setSelectedTechnique(technique === selectedTechnique ? null : technique)}
                   className={`relative ${
-                    technique === selectedTechnique ? "ring-2 ring-leafy-green-medium rounded-full" : ""
+                    technique.id === selectedTechnique?.id ? "ring-2 ring-leafy-green-medium rounded-full" : ""
                   }`}
                 >
-                  <TechniqueBadge technique={technique} />
+                  <TechniqueBadge technique={technique.name} />
                 </button>
               ))}
             </div>
@@ -144,10 +211,17 @@ export default function NewPostPage() {
           <div className="flex justify-center">
             <button
               type="submit"
-              disabled={isSubmitting || !caption.trim() || !image || !selectedTechnique}
+              disabled={isSubmitting || !caption.trim() || !image}
               className="w-full max-w-md bg-leafy-green-dark hover:bg-leafy-green-forest text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              {isSubmitting ? "Sharing..." : "Share Post"}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sharing...
+                </>
+              ) : (
+                "Share Post"
+              )}
             </button>
           </div>
         </form>
@@ -155,4 +229,3 @@ export default function NewPostPage() {
     </div>
   )
 }
-

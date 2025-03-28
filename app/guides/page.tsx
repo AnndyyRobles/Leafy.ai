@@ -6,14 +6,13 @@ import { PlantGuideFilters } from "@/components/guides/plant-guide-filters"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
 import { ContributeGuideDialog } from "@/components/guides/contribute-guide-dialog"
+import { useAuth } from "@/components/auth/auth-provider"
 
 export default function GuidesPage() {
   const [isContributeDialogOpen, setIsContributeDialogOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
-
-  // Mock user authentication state - in a real app, this would come from your auth system
-  const isLoggedIn = true
+  const { isAuthenticated } = useAuth()
 
   return (
     <div className="flex flex-col min-h-screen bg-leafy-beige-light">
@@ -21,7 +20,7 @@ export default function GuidesPage() {
         <div className="flex items-center justify-between max-w-7xl mx-auto h-12">
           <h1 className="text-2xl font-bold text-leafy-green-forest">Plant Guides</h1>
 
-          {isLoggedIn && (
+          {isAuthenticated && (
             <Button
               onClick={() => setIsContributeDialogOpen(true)}
               className="bg-leafy-green-dark hover:bg-leafy-green-forest text-white flex items-center gap-2"
@@ -53,4 +52,3 @@ export default function GuidesPage() {
     </div>
   )
 }
-

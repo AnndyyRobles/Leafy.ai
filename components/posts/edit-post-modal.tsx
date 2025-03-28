@@ -4,14 +4,17 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Upload, X } from "lucide-react"
+import { Upload, X, Loader2 } from "lucide-react"
 import { TechniqueBadge } from "@/components/posts/technique-badge"
 import { useToast } from "@/components/ui/use-toast"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import type { Post } from "./posts-feed"
+import axios from "axios"
 
-// Definir las técnicas de cultivo disponibles
-const CULTIVATION_TECHNIQUES = ["Vertical", "Wall-mounted", "Hydroponics", "Recycled Materials", "Aquaponics"]
+interface Technique {
+  id: number
+  name: string
+}
 
 interface EditPostModalProps {
   post: Post | null
@@ -25,24 +28,43 @@ export function EditPostModal({ post, isOpen, onClose, onSave }: EditPostModalPr
   const { toast } = useToast()
   const [caption, setCaption] = useState("")
   const [selectedTechnique, setSelectedTechnique] = useState<string | null>(null)
-  const [image, setImage] = useState<string | null>(null)
+  const [image, setImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [techniques, setTechniques] = useState<Technique[]>([])
+
+  // Cargar técnicas de cultivo
+  useEffect(() => {
+    const fetchTechniques = async () => {
+      try {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/techniques`)
+        setTechniques(response.data)
+      } catch (error) {
+        console.error("Error cargando técnicas:", error)
+      }
+    }
+
+    if (isOpen) {
+      fetchTechniques()
+    }
+  }, [isOpen])
 
   // Cargar los datos del post cuando se abre el modal
   useEffect(() => {
     if (post && isOpen) {
       setCaption(post.caption || "")
       setSelectedTechnique(post.techniques[0] || null)
-      setImage(post.images[0] || null)
+      setImagePreview(post.images[0] || null)
     }
   }, [post, isOpen])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      setImage(file)
       const reader = new FileReader()
       reader.onload = (e) => {
-        setImage(e.target?.result as string)
+        setImagePreview(e.target?.result as string)
       }
       reader.readAsDataURL(file)
     }
@@ -50,15 +72,16 @@ export function EditPostModal({ post, isOpen, onClose, onSave }: EditPostModalPr
 
   const removeImage = () => {
     setImage(null)
+    // No eliminamos imagePreview para mantener la imagen original
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!caption.trim() || !image) {
+    if (!caption.trim()) {
       toast({
-        title: "Missing information",
-        description: "Please add both a caption and an image to update your post.",
+        title: "Información incompleta",
+        description: "Por favor añade un texto para tu post.",
         variant: "destructive",
       })
       return
@@ -67,24 +90,30 @@ export function EditPostModal({ post, isOpen, onClose, onSave }: EditPostModalPr
     setIsSubmitting(true)
 
     // Preparar los datos actualizados
-    const updatedPost = {
-      ...post,
+    const updatedPost: Partial<Post> = {
+      id: post?.id,
       caption,
       techniques: selectedTechnique ? [selectedTechnique] : [],
-      images: [image],
     }
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    // Si hay una nueva imagen, actualizar el arreglo de imágenes
+    if (image) {
+      // En un caso real, la imagen se enviaría al servidor
+      // y se actualizaría la URL, pero para este ejemplo
+      // solo actualizamos el arreglo de imágenes con la URL temporal
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const imageUrl = e.target?.result as string
+        updatedPost.images = [imageUrl]
+        onSave(updatedPost)
+      }
+      reader.readAsDataURL(image)
+    } else {
+      // Si no hay nueva imagen, usar la URL existente
+      onSave(updatedPost)
+    }
 
-    onSave(updatedPost)
     setIsSubmitting(false)
-    onClose()
-
-    toast({
-      title: "Post updated!",
-      description: "Your post has been updated successfully.",
-    })
   }
 
   return (
@@ -104,31 +133,31 @@ export function EditPostModal({ post, isOpen, onClose, onSave }: EditPostModalPr
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <h2 className="text-lg font-medium mb-4 text-leafy-green-dark">Image</h2>
 
-            {!image ? (
-              <div className="border-2 border-dashed border-leafy-green-light rounded-lg p-8 text-center">
+            <div className="relative">
+              <img
+                src={imagePreview || "/placeholder.svg"}
+                alt="Preview"
+                className="w-full rounded-lg object-cover max-h-96"
+              />
+              <div className="absolute bottom-2 right-2 flex gap-2">
                 <input type="file" accept="image/*" id="image-upload" className="hidden" onChange={handleImageUpload} />
-                <label htmlFor="image-upload" className="flex flex-col items-center justify-center cursor-pointer">
-                  <Upload className="h-12 w-12 text-leafy-green-medium mb-2" />
-                  <p className="text-sm text-leafy-green-dark mb-1">Click to upload an image</p>
-                  <p className="text-xs text-leafy-green-medium">JPG, PNG, GIF up to 10MB</p>
-                </label>
-              </div>
-            ) : (
-              <div className="relative">
-                <img
-                  src={image || "/placeholder.svg"}
-                  alt="Preview"
-                  className="w-full rounded-lg object-cover max-h-96"
-                />
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="absolute top-2 right-2 bg-black bg-opacity-50 rounded-full p-1 text-white hover:bg-opacity-70"
+                <label 
+                  htmlFor="image-upload" 
+                  className="bg-black bg-opacity-50 rounded-full p-2 text-white hover:bg-opacity-70 cursor-pointer"
                 >
-                  <X className="h-5 w-5" />
-                </button>
+                  <Upload className="h-5 w-5" />
+                </label>
+                {image && (
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="bg-black bg-opacity-50 rounded-full p-2 text-white hover:bg-opacity-70"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           {/* Caption section */}
@@ -146,16 +175,16 @@ export function EditPostModal({ post, isOpen, onClose, onSave }: EditPostModalPr
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <h2 className="text-lg font-medium mb-4 text-leafy-green-dark">Cultivation Technique</h2>
             <div className="flex flex-wrap gap-2">
-              {CULTIVATION_TECHNIQUES.map((technique) => (
+              {techniques.map((technique) => (
                 <button
-                  key={technique}
+                  key={technique.id}
                   type="button"
-                  onClick={() => setSelectedTechnique(technique === selectedTechnique ? null : technique)}
+                  onClick={() => setSelectedTechnique(technique.name === selectedTechnique ? null : technique.name)}
                   className={`relative ${
-                    technique === selectedTechnique ? "ring-2 ring-leafy-green-medium rounded-full" : ""
+                    technique.name === selectedTechnique ? "ring-2 ring-leafy-green-medium rounded-full" : ""
                   }`}
                 >
-                  <TechniqueBadge technique={technique} />
+                  <TechniqueBadge technique={technique.name} />
                 </button>
               ))}
             </div>
@@ -172,10 +201,17 @@ export function EditPostModal({ post, isOpen, onClose, onSave }: EditPostModalPr
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !caption.trim() || !image || !selectedTechnique}
+              disabled={isSubmitting || !caption.trim()}
               className="px-4 py-2 bg-leafy-green-dark hover:bg-leafy-green-forest text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? "Saving..." : "Save Changes"}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="inline mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
             </button>
           </div>
         </form>
@@ -183,4 +219,3 @@ export function EditPostModal({ post, isOpen, onClose, onSave }: EditPostModalPr
     </Dialog>
   )
 }
-

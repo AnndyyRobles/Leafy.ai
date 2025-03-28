@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import axios from "axios"
 import { PostCard } from "./post-card"
 import { PostModal } from "./post-modal"
 
@@ -30,166 +31,6 @@ export interface Post {
   location?: string
 }
 
-// Sample data for posts - modificado para que cada post tenga solo una técnica
-const SAMPLE_POSTS: Post[] = [
-  {
-    id: "1",
-    user: {
-      id: "u1",
-      name: "Plant Paradise",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop",
-    },
-    images: ["https://images.unsplash.com/photo-1470058869958-2a77ade41c02?w=800"],
-    caption: "The perfect morning view 🌿 #PlantLife #Botanical",
-    techniques: ["Vertical"],
-    likes: 1234,
-    comments: [
-      {
-        id: "c1",
-        user: {
-          id: "u2",
-          name: "Green Thumb",
-          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=50&h=50&fit=crop",
-        },
-        text: "This looks amazing! What kind of plants are those?",
-        createdAt: "2023-06-15T10:30:00Z",
-      },
-    ],
-    createdAt: "2023-06-15T09:00:00Z",
-    location: "Botanical Gardens",
-  },
-  {
-    id: "2",
-    user: {
-      id: "u2",
-      name: "Green Thumb",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=50&h=50&fit=crop",
-    },
-    images: ["https://images.unsplash.com/photo-1463936575829-25148e1db1b8?w=800"],
-    caption: "New addition to my plant family! 🌱 #PlantLover #GreenHome",
-    techniques: ["Wall-mounted"],
-    likes: 2567,
-    comments: [
-      {
-        id: "c2",
-        user: {
-          id: "u1",
-          name: "Plant Paradise",
-          avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop",
-        },
-        text: "Love the setup! What's the name of this plant?",
-        createdAt: "2023-06-15T12:30:00Z",
-      },
-    ],
-    createdAt: "2023-06-15T11:00:00Z",
-    location: "Home Garden",
-  },
-  {
-    id: "3",
-    user: {
-      id: "u3",
-      name: "Urban Jungle",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&h=50&fit=crop",
-    },
-    images: ["https://images.unsplash.com/photo-1446071103084-c257b5f70672?w=800"],
-    caption: "Sunday morning coffee with my green friends ☕️🪴 #PlantsCommunity",
-    techniques: ["Aquaponics"],
-    likes: 3891,
-    comments: [
-      {
-        id: "c3",
-        user: {
-          id: "u4",
-          name: "Botanical Life",
-          avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop",
-        },
-        text: "This setup is goals! How long have you been growing these?",
-        createdAt: "2023-06-15T14:30:00Z",
-      },
-    ],
-    createdAt: "2023-06-15T13:00:00Z",
-    location: "Urban Jungle Café",
-  },
-  {
-    id: "4",
-    user: {
-      id: "u4",
-      name: "Botanical Life",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop",
-    },
-    images: ["https://images.unsplash.com/photo-1453904300235-0f2f60b15b5d?w=800"],
-    caption: "Morning light and fresh leaves 🌿✨ #PlantLife",
-    techniques: ["Hydroponics"],
-    likes: 1543,
-    comments: [
-      {
-        id: "c4",
-        user: {
-          id: "u5",
-          name: "Plant Whisperer",
-          avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=50&h=50&fit=crop",
-        },
-        text: "The lighting is perfect! What direction does your window face?",
-        createdAt: "2023-06-15T16:30:00Z",
-      },
-    ],
-    createdAt: "2023-06-15T15:00:00Z",
-    location: "Botanical Studio",
-  },
-  {
-    id: "5",
-    user: {
-      id: "u5",
-      name: "Plant Whisperer",
-      avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=50&h=50&fit=crop",
-    },
-    images: ["https://images.unsplash.com/photo-1509423350716-97f9360b4e09?w=800"],
-    caption: "Weekend vibes with my green friends 🌿",
-    techniques: ["Recycled Materials"],
-    likes: 2156,
-    comments: [
-      {
-        id: "c5",
-        user: {
-          id: "u6",
-          name: "Leaf Lover",
-          avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop",
-        },
-        text: "Such a peaceful corner! What's your watering routine?",
-        createdAt: "2023-06-15T18:30:00Z",
-      },
-    ],
-    createdAt: "2023-06-15T17:00:00Z",
-    location: "Green Corner",
-  },
-  {
-    id: "6",
-    user: {
-      id: "u6",
-      name: "Leaf Lover",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop",
-    },
-    images: ["https://images.unsplash.com/photo-1470058869958-2a77ade41c02?w=800"],
-    caption: "Morning coffee with a view 🪴",
-    techniques: ["Wall-mounted"],
-    likes: 1876,
-    comments: [
-      {
-        id: "c6",
-        user: {
-          id: "u1",
-          name: "Plant Paradise",
-          avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop",
-        },
-        text: "This is so beautiful! What kind of soil do you use?",
-        createdAt: "2023-06-15T20:30:00Z",
-      },
-    ],
-    createdAt: "2023-06-15T19:00:00Z",
-    location: "Home Garden",
-  },
-]
-
 interface PostsFeedProps {
   selectedTechnique: string | null
 }
@@ -197,46 +38,163 @@ interface PostsFeedProps {
 export function PostsFeed({ selectedTechnique }: PostsFeedProps) {
   const [posts, setPosts] = useState<Post[]>([])
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Filter posts based on selected technique
+  // Fetch posts from API with technique filter
   useEffect(() => {
-    if (selectedTechnique) {
-      setPosts(SAMPLE_POSTS.filter((post) => post.techniques.includes(selectedTechnique)))
-    } else {
-      setPosts(SAMPLE_POSTS)
-    }
-  }, [selectedTechnique])
+    const fetchPosts = async () => {
+      setLoading(true);
+      try {
+        let url = `${process.env.NEXT_PUBLIC_API_URL}/api/posts`;
+        
+        // Add technique filter if selected
+        if (selectedTechnique) {
+          // You would need an endpoint that can filter by technique name
+          url += `?techniqueName=${encodeURIComponent(selectedTechnique)}`;
+        }
+        
+        const response = await axios.get(url);
+        
+        // Transform API data to match the Post interface
+        const transformedPosts = response.data.map((post: any) => ({
+          id: post.id.toString(),
+          user: {
+            id: post.user_id.toString(),
+            name: post.user_name,
+            avatar: post.user_avatar ? `${process.env.NEXT_PUBLIC_API_URL}/${post.user_avatar}` : "/placeholder.svg",
+          },
+          images: [post.post_picture ? `${process.env.NEXT_PUBLIC_API_URL}/${post.post_picture}` : "/placeholder.svg"],
+          caption: post.description,
+          techniques: post.techniques || [],
+          likes: post.likes,
+          comments: (post.comments || []).map((comment: any) => ({
+            id: comment.id.toString(),
+            user: {
+              id: comment.user.id.toString(),
+              name: comment.user.name,
+              avatar: comment.user.avatar ? `${process.env.NEXT_PUBLIC_API_URL}/${comment.user.avatar}` : "/placeholder.svg",
+            },
+            text: comment.text,
+            createdAt: comment.createdAt,
+          })),
+          createdAt: post.post_date,
+          location: post.location,
+        }));
+        
+        setPosts(transformedPosts);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching posts:", err);
+        setError("No se pudieron cargar los posts");
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, [selectedTechnique]);
 
   // Handle like functionality
-  const handleLike = (postId: string) => {
-    setPosts((prevPosts) => prevPosts.map((post) => (post.id === postId ? { ...post, likes: post.likes + 1 } : post)))
+  // Handle like functionality
+const handleLike = async (postId: string) => {
+  try {
+    // Verificar si el usuario está autenticado
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast({
+        title: "Necesitas iniciar sesión",
+        description: "Debes iniciar sesión para dar 'me gusta' a los posts",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Realizar la solicitud para dar me gusta
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/posts/${postId}/like`, 
+      {}, 
+      {
+        headers: { 
+          Authorization: `Bearer ${token}` 
+        }
+      }
+    );
+    
+    // Actualizar la UI con el nuevo número de me gusta
+    setPosts((prevPosts) => prevPosts.map((post) => 
+      post.id === postId ? { ...post, likes: response.data.likes } : post
+    ));
+    
+    // Si hay un post seleccionado, actualizarlo también
+    if (selectedPost && selectedPost.id === postId) {
+      setSelectedPost({
+        ...selectedPost,
+        likes: response.data.likes
+      });
+    }
+  } catch (err) {
+    console.error("Error giving like:", err);
+    toast({
+      title: "Error",
+      description: "No se pudo dar 'me gusta' al post",
+      variant: "destructive",
+    });
   }
+};
 
   // Open post modal
   const openPostModal = (post: Post) => {
-    setSelectedPost(post)
-  }
+    setSelectedPost(post);
+  };
 
   // Close post modal
   const closePostModal = () => {
-    setSelectedPost(null)
-  }
+    setSelectedPost(null);
+  };
 
   // Add comment to a post
-  const handleAddComment = (postId: string, comment: string) => {
-    if (!comment.trim()) return
+  // Add comment to a post
+const handleAddComment = async (postId: string, comment: string) => {
+  if (!comment.trim()) return;
 
-    const newComment: PostComment = {
-      id: `c${Date.now()}`,
-      user: {
-        id: "current-user",
-        name: "Plant Lover",
-        avatar: "/placeholder.svg",
-      },
-      text: comment,
-      createdAt: new Date().toISOString(),
+  try {
+    // Verificar si el usuario está autenticado
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast({
+        title: "Necesitas iniciar sesión",
+        description: "Debes iniciar sesión para comentar en los posts",
+        variant: "destructive",
+      });
+      return;
     }
+    
+    // Realizar la solicitud para añadir un comentario
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/posts/${postId}/comments`, 
+      { content: comment },
+      { 
+        headers: { 
+          Authorization: `Bearer ${token}` 
+        } 
+      }
+    );
+    
+    // Transformar la respuesta para que coincida con la interfaz PostComment
+    const newComment: PostComment = {
+      id: response.data.id.toString(),
+      user: {
+        id: response.data.user.id.toString(),
+        name: response.data.user.name,
+        avatar: response.data.user.profile_picture 
+          ? `${process.env.NEXT_PUBLIC_API_URL}/${response.data.user.profile_picture}` 
+          : "/placeholder.svg",
+      },
+      text: response.data.content,
+      createdAt: response.data.comment_date,
+    };
 
+    // Actualizar los posts con el nuevo comentario
     setPosts((prevPosts) =>
       prevPosts.map((post) =>
         post.id === postId
@@ -246,7 +204,35 @@ export function PostsFeed({ selectedTechnique }: PostsFeedProps) {
             }
           : post,
       ),
-    )
+    );
+    
+    // Si hay un post seleccionado, actualizarlo también
+    if (selectedPost && selectedPost.id === postId) {
+      setSelectedPost({
+        ...selectedPost,
+        comments: [...selectedPost.comments, newComment],
+      });
+    }
+  } catch (err) {
+    console.error("Error adding comment:", err);
+    toast({
+      title: "Error",
+      description: "No se pudo añadir el comentario",
+      variant: "destructive",
+    });
+  }
+};
+
+  if (loading) {
+    return <div className="py-8 text-center">Cargando posts...</div>;
+  }
+
+  if (error) {
+    return <div className="py-8 text-center text-red-500">{error}</div>;
+  }
+
+  if (posts.length === 0) {
+    return <div className="py-8 text-center">No hay posts disponibles</div>;
   }
 
   return (
@@ -265,9 +251,13 @@ export function PostsFeed({ selectedTechnique }: PostsFeedProps) {
 
       {/* Post modal for expanded view */}
       {selectedPost && (
-        <PostModal post={selectedPost} onClose={closePostModal} onLike={handleLike} onAddComment={handleAddComment} />
+        <PostModal 
+          post={selectedPost} 
+          onClose={closePostModal} 
+          onLike={handleLike} 
+          onAddComment={handleAddComment} 
+        />
       )}
     </div>
-  )
+  );
 }
-

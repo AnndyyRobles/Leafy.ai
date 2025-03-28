@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { Eye, EyeOff, Loader2, Upload, X } from "lucide-react"
+import { useAuth } from "./auth-provider"
 
 export function RegisterForm() {
   const [username, setUsername] = useState("")
@@ -23,6 +24,7 @@ export function RegisterForm() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const { toast } = useToast()
+  const { register } = useAuth()
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -81,19 +83,17 @@ export function RegisterForm() {
     }
 
     try {
-      // Aquí iría la lógica real de registro
-      // Simulamos un delay para mostrar el estado de carga
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
+      // Registrar usuario
+      await register(username, email, password)
+      
       toast({
         title: "Registro exitoso",
         description: "Tu cuenta ha sido creada correctamente",
       })
 
-      // Redirigir al usuario a la página principal
-      router.push("/")
-    } catch (err) {
-      setError("Error al crear la cuenta. Por favor intenta de nuevo.")
+      // Redirigir al usuario a la página principal (esto lo hace automáticamente el AuthProvider)
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Error al crear la cuenta. Por favor intenta de nuevo.")
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -177,7 +177,7 @@ export function RegisterForm() {
             <div className="relative h-16 w-16 overflow-hidden rounded-full border bg-muted">
               {profileImage ? (
                 <>
-                  <Image src={profileImage || "/placeholder.svg"} alt="Profile preview" fill className="object-cover" />
+                  <Image src={profileImage} alt="Profile preview" fill className="object-cover" />
                   <button
                     type="button"
                     onClick={removeImage}
@@ -234,4 +234,3 @@ export function RegisterForm() {
     </form>
   )
 }
-
